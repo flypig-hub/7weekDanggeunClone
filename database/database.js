@@ -1,15 +1,18 @@
 const mongoose = require("mongoose");
+const env = require("../config/env");
 
 function connectDb() {
-    return mongoose.connect(
-      "mongodb+srv://xoxokss:test@cluster0.dkb77.mongodb.net/carrot?retryWrites=true&w=majority",
-      // "mongodb+srv://test:sparta@cluster0.rx7dw.mongodb.net/minipjt?retryWrites=true&w=majority",
-      {
-       ignoreUndefined: true,
-       useNewUrlParser: true,
-       useUnifiedTopology: true,
-      }
-    )
-};
+  if (!env.mongodbUri) {
+    console.warn("MONGODB_URI가 설정되지 않아 DB 연결을 건너뜁니다.");
+    return Promise.resolve();
+  }
+
+  return mongoose.connect(env.mongodbUri, {
+    ignoreUndefined: true,
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  });
+}
+
 module.exports = connectDb;
 //----------------------------------------------//
