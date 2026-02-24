@@ -1,3 +1,4 @@
+const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -9,7 +10,9 @@ const reqlogMiddleware = require("./middlewares/request-log-middleware");
 
 const port = 8080;
 
-connectDb(); //몽고디비 실행
+connectDb().catch((error) => {
+    console.error("MongoDB connection failed:", error.message);
+}); //몽고디비 실행
 
 const corsOption = {
     origin: "*",
@@ -29,10 +32,11 @@ app.use(express.urlencoded({extended:false}));
 //미들웨어 실행
 app.use(reqlogMiddleware);
 app.use(cors(corsOption));
+app.use(express.static(path.join(__dirname, "public")));
 
 //라우터 등록
 app.get("/", (req, res) => {
-    res.send("Backend Sever")
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 app.use("/api/user", UserRouter);
 
