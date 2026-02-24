@@ -5,8 +5,10 @@ const cors = require("cors");
 const UserRouter = require("./router/userRouter");
 const PostRouter = require("./router/postRouter");
 const likeRouter = require("./router/likeRouter");
+const monitoringRouter = require("./router/monitoringRouter");
 const connectDb = require("./database/database"); //몽고디비 스키마 연결
 const reqlogMiddleware = require("./middlewares/request-log-middleware");
+const { writeLog } = require("./utils/log-writer");
 
 const port = 8080;
 
@@ -43,6 +45,15 @@ app.use("/api/user", UserRouter);
 app.use("/api/post", PostRouter);
 
 app.use("/api/like", likeRouter);
+app.use("/api/monitoring", monitoringRouter);
+
+process.on("unhandledRejection", (reason) => {
+    writeLog("error", { type: "unhandledRejection", reason: String(reason) });
+});
+
+process.on("uncaughtException", (error) => {
+    writeLog("error", { type: "uncaughtException", message: error.message, stack: error.stack });
+});
 
 app.listen(port, () => {
     console.log(port, "포트로 서버가 켜졌어요~!")
