@@ -2,59 +2,57 @@ const path = require("path");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+
+const connectDb = require("./database/database");
+const reqlogMiddleware = require("./middlewares/request-log-middleware");
+const { writeLog } = require("./utils/log-writer");
+
 const UserRouter = require("./router/userRouter");
 const PostRouter = require("./router/postRouter");
 const likeRouter = require("./router/likeRouter");
 const monitoringRouter = require("./router/monitoringRouter");
-const connectDb = require("./database/database"); //몽고디비 스키마 연결
-const reqlogMiddleware = require("./middlewares/request-log-middleware");
-const { writeLog } = require("./utils/log-writer");
 
-const port = 8080;
-
-connectDb().catch((error) => {
-    console.error("MongoDB connection failed:", error.message);
-}); //몽고디비 실행
-
-const corsOption = {
-    origin: "*",
-    credentials: true,
-};
-//cors 설정
-
-const db = mongoose.connection;
-db.on("error", console.error.bind(console, "connection error: "));
-
+const PORT = Number(process.env.PORT) || 8080;
 const app = express();
 
-//body parser
-app.use(express.json());
-app.use(express.urlencoded({extended:false}));
+connectDb().catch((error) => {
+  console.error("MongoDB connection failed:", error.message);
+  writeLog("error", { type: "mongodb_connect_error", message: error.message });
+});
 
-//미들웨어 실행
+const db = mongoose.connection;
+db.on("error", (error) => {
+  console.error("connection error:", error);
+  writeLog("error", { type: "mongodb_runtime_error", message: String(error) });
+});
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 app.use(reqlogMiddleware);
-app.use(cors(corsOption));
+app.use(cors({ origin: "*", credentials: true }));
 app.use(express.static(path.join(__dirname, "public")));
 
-//라우터 등록
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 app.use("/api/user", UserRouter);
-
 app.use("/api/post", PostRouter);
-
 app.use("/api/like", likeRouter);
 app.use("/api/monitoring", monitoringRouter);
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
 process.on("unhandledRejection", (reason) => {
-    writeLog("error", { type: "unhandledRejection", reason: String(reason) });
+  writeLog("error", { type: "unhandledRejection", reason: String(reason) });
 });
 
 process.on("uncaughtException", (error) => {
-    writeLog("error", { type: "uncaughtException", message: error.message, stack: error.stack });
+  writeLog("error", {
+    type: "uncaughtException",
+    message: error.message,
+    stack: error.stack,
+  });
 });
 
-app.listen(port, () => {
-    console.log(port, "포트로 서버가 켜졌어요~!")
+app.listen(PORT, () => {
+  console.log(`${PORT} 포트로 서버가 켜졌어요~!`);
 });
